@@ -48,8 +48,12 @@ func Run(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
 
 	cgroupManager := NewCgroupManager("mydocker-cgroup")
 	defer cgroupManager.Destroy()
-	cgroupManager.Set(res)
-	cgroupManager.Apply(parent.Process.Pid)
+	if err := cgroupManager.Set(res); err != nil {
+		log.Warnf("cgroup set error: %v", err)
+	}
+	if err := cgroupManager.Apply(parent.Process.Pid); err != nil {
+		log.Errorf("cgroup apply error: %v (memory limit may not take effect)", err)
+	}
 	sendInitCommand(cmdArray, writePipe)
 
 	// 等待子进程运行结束
