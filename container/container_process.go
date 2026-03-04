@@ -31,6 +31,8 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/sirupsen/logrus"
 )
 
 // NewParentProcess 创建一个配置了 Linux 命名空间的子进程命令
@@ -49,14 +51,15 @@ import (
 //  3. 通过 SysProcAttr.Cloneflags 配置 Linux 命名空间
 //     → 子进程启动时就已经在新的命名空间中了
 //  4. 如果 tty=true，将子进程的 IO 连接到终端
-func NewParentProcess(tty bool, cmdArray []string) *exec.Cmd {
-	// 将 "init" 作为第一个参数，后面跟上用户命令
-	// 这样子进程启动后，CLI 框架会解析到 init 子命令
-	args := append([]string{"init"}, cmdArray...)
+func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
 
-	// 创建命令：让程序调用自身（/proc/self/exe），传入上面的参数
-	// 等效于在终端运行：/path/to/my-docker init /bin/sh
-	cmd := exec.Command("/proc/self/exe", args...)
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		logrus.Errorf("new pipe error: %v", err)
+		return nil, nil, err
+	}
+
+	cmd := exec.Command("/proc/self/exe", "init")
 
 	// ── 🔑 核心：设置 Linux 命名空间 ──
 	// 通过 Cloneflags 指定子进程需要创建哪些新的命名空间
@@ -81,6 +84,6 @@ func NewParentProcess(tty bool, cmdArray []string) *exec.Cmd {
 		cmd.Stdout = os.Stdout // 标准输出：输出到终端
 		cmd.Stderr = os.Stderr // 标准错误：错误信息也输出到终端
 	}
-
-	return cmd // 返回配置好的 Cmd 对象，由 run.go 中的 Run() 函数负责启动
+	cmd.ExtraFiles = []*os.File{readPipe}
+	return cmd, writePipe, nil
 }

@@ -22,6 +22,8 @@
 package container
 
 import (
+	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -47,7 +49,7 @@ func RunContainerInitProcess() error {
 	// 我们需要跳过前两项，取出真正的用户命令
 	cmdArray := readUserCommand()
 	if len(cmdArray) == 0 {
-		return nil // 如果没有命令，直接返回（异常情况下的防御性处理）
+		return errors.New("user command is empty")
 	}
 
 	// ── 第 2 步：挂载 /proc 文件系统 ──
@@ -90,15 +92,18 @@ func RunContainerInitProcess() error {
 //	os.Args[3] = ...               ← 用户命令的参数（可选）
 //
 // 返回值：从 os.Args[2:] 开始的切片，即用户命令及其参数
+
+const FD_INDEX = 3
+
 func readUserCommand() []string {
-	// 如果参数不足 3 个，说明没有传入用户命令
-	if len(os.Args) < 3 {
+	pipe := os.NewFile(uintptr(FD_INDEX), "pipe")
+	msg, err := io.ReadAll(pipe)
+	if err != nil {
+		logrus.Errorf("read user command error: %v", err)
 		return nil
 	}
-	// 取出 os.Args[2:] 作为用户命令
-	args := os.Args[2:]
-	logrus.Infof("command: %s", strings.Join(args, " ")) // 打印即将执行的命令，方便调试
-	return args
+	msgStr := string(msg)
+	return strings.Split(msgStr, " ")
 }
 
 // setUpMount 在容器内部挂载 /proc 文件系统

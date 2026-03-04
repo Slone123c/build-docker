@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"build-docker/container" // 引入容器相关逻辑的子包
+	"build-docker/subsystem"
 
 	log "github.com/sirupsen/logrus" // 日志库
 	"github.com/urfave/cli"          // CLI 框架
@@ -49,6 +50,18 @@ var runCommand = cli.Command{
 			Name:  "it",                                       // 参数名称，用户通过 -it 来使用
 			Usage: "enable stdin/stdout and interactive mode", // 参数说明
 		},
+		cli.StringFlag{
+			Name:  "mem", // 限制进程内存使用量，为了避免和 stress 命令的 -m 参数冲突 这里使用 -mem,到时候可以看下解决冲突的方法
+			Usage: "memory limit,e.g.: -mem 100m",
+		},
+		cli.StringFlag{
+			Name:  "cpu",
+			Usage: "cpu quota,e.g.: -cpu 100", // 限制进程 cpu 使用率
+		},
+		cli.StringFlag{
+			Name:  "cpuset",
+			Usage: "cpuset limit,e.g.: -cpuset 2,4", // 限制进程 cpu 使用率
+		},
 	},
 
 	// Action 是当用户执行 run 命令时实际执行的函数
@@ -60,17 +73,20 @@ var runCommand = cli.Command{
 			return fmt.Errorf("please provide a command to run")
 		}
 
-		// 获取 -it 参数的值（true 或 false）
-		// 如果为 true，容器进程的 stdin/stdout/stderr 会连接到当前终端
+		var cmdArray []string
+		for _, arg := range context.Args() {
+			cmdArray = append(cmdArray, arg)
+		}
 		tty := context.Bool("it")
-
-		// 获取用户命令参数列表
-		// 例如 "./my-docker run -it /bin/ls -l" → cmdArray = ["/bin/ls", "-l"]
-		cmdArray := context.Args()
+		resConf := &subsystem.ResourceConfig{
+			MemoryLimit: context.String("mem"),
+			// CPUSet:      context.String("cpuset"),
+			// CPUShare:    context.String("cpu"),
+		}
 
 		// 调用 Run() 函数（定义在 run.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		Run(tty, cmdArray)
+		Run(tty, cmdArray, resConf)
 		return nil
 	},
 }
