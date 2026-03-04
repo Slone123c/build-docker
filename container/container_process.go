@@ -67,6 +67,11 @@ func NewParentProcess(tty bool, cmdArray []string) *exec.Cmd {
 			syscall.CLONE_NEWNS | //   MNT 命名空间：隔离文件系统挂载点
 			syscall.CLONE_NEWNET | //  NET 命名空间：隔离网络栈（网卡、IP、端口等）
 			syscall.CLONE_NEWIPC, //   IPC 命名空间：隔离进程间通信资源
+		// ✅ 让子进程成为新会话的领导者（Session Leader）
+		// 这样子进程才能合法地控制 TTY（终端），
+		// /bin/sh 等交互式 shell 在 exit 时需要调用 tcsetpgrp() 把自己设为前台进程组，
+		// 如果没有 Setsid，tcsetpgrp() 会失败，报 "Cannot set tty process group (No such process)"
+		Setsid: true,
 	}
 
 	// 如果开启了交互模式（-it），将子进程的标准 IO 连接到当前终端

@@ -116,6 +116,27 @@ func readUserCommand() []string {
 //   - MS_NOSUID:  不允许 set-user-ID 和 set-group-ID 生效（安全措施）
 //   - MS_NODEV:   不允许访问设备文件（安全措施）
 func setUpMount() {
+	// ── 关键步骤：将当前挂载树设为私有传播（private）──
+	//
+	// ❓ 为什么需要这一步？
+	//    新的 MNT 命名空间（CLONE_NEWNS）默认会「继承」宿主机挂载点的传播属性。
+	//    如果宿主机挂载点是 shared 模式（默认），子进程对 /proc 的 mount 操作会
+	//    「传播」回宿主机的 MNT 命名空间，污染宿主机的 /proc。
+	//    容器退出后，宿主机的 ps 命令就会报：
+	//      "Error, do this: mount -t proc proc /proc"
+	//
+	//    解决方法：在子进程内，先把整个挂载树改为 private（私有）传播，
+	//    这样后续的 mount/umount 操作就只对本命名空间可见，不会泄漏到宿主机。
+	//
+	// 参数说明：
+	//   - "":        设备名称（这里是递归操作整个命名空间，不针对某个设备）
+	//   - "/":       作用目标：根挂载点，配合 MS_REC 递归影响所有挂载点
+	//   - "":        文件系统类型（改传播属性时不需要）
+	//   - MS_PRIVATE | MS_REC: 将所有挂载点改为「私有」模式，且递归作用
+	if err := syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
+		logrus.Errorf("mount private error: %v", err)
+	}
+
 	// 组合挂载标志：禁止执行程序 + 禁止 SUID + 禁止设备访问
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
