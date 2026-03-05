@@ -70,11 +70,21 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
 			syscall.CLONE_NEWNS | //   MNT 命名空间：隔离文件系统挂载点
 			syscall.CLONE_NEWNET | //  NET 命名空间：隔离网络栈（网卡、IP、端口等）
 			syscall.CLONE_NEWIPC, //   IPC 命名空间：隔离进程间通信资源
-		// ✅ 让子进程成为新会话的领导者（Session Leader）
-		// 这样子进程才能合法地控制 TTY（终端），
-		// /bin/sh 等交互式 shell 在 exit 时需要调用 tcsetpgrp() 把自己设为前台进程组，
-		// 如果没有 Setsid，tcsetpgrp() 会失败，报 "Cannot set tty process group (No such process)"
+		// ✅ Setsid：让子进程成为新 Session 的 Leader（与父进程 Session 彻底隔离）
+		//    这样 Ctrl+C 等信号不会跨越 Session 影响到父进程（mydocker）。
 		Setsid: true,
+		// ✅ Setctty + Ctty：将 fd=0（stdin/TTY）设为新 Session 的控制终端
+		//
+		//    ⚠️ Go runtime 的规则：必须同时设置这两个字段！
+		//       - Setctty: true  → 告诉 Go runtime 执行 ioctl(fd, TIOCSCTTY, 1)
+		//       - Ctty: 0        → 指定用哪个 fd（0=stdin，即 TTY）
+		//    只设置 Ctty 而不设置 Setctty，Go 会完全忽略 Ctty 字段，没有任何效果！
+		//
+		//    没有控制终端时，bash 调用 tcsetpgrp() 会返回 ENOTTY：
+		//    "cannot set terminal process group (-1): Inappropriate ioctl for device"
+		//    并禁用 job control 后直接退出。
+		Setctty: true,
+		Ctty:    0, // fd=0 = stdin（已通过 cmd.Stdin = os.Stdin 连接到 TTY）
 	}
 
 	// 如果开启了交互模式（-it），将子进程的标准 IO 连接到当前终端
