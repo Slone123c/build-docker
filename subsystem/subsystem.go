@@ -16,8 +16,9 @@ const (
 
 type ResourceConfig struct {
 	MemoryLimit string
-	CpuShare    string
-	CpuSet      string
+	// CpuShare    string
+	// CpuSet      string
+	CpuQuota string
 }
 
 type Subsystem interface {
@@ -35,7 +36,7 @@ var (
 	SubsystemsIns = []Subsystem{
 		// &CpusetSubsystem{},
 		&MemorySubsystem{},
-		// &CpuSubsystem{},
+		&CpuQuotaSubsystem{}, // ✅ CPU 配额限制（cgroup v2 cpu.max）
 	}
 )
 
@@ -101,24 +102,4 @@ func GetCgroupPath(subsytem string, cgroupPath string, autoCreate bool) (string,
 		}
 	}
 	return path.Join(cgroupRoot, cgroupPath), nil
-}
-
-// GetMemoryCgroupPath 返回用于内存限制的 cgroup 目录路径。
-// 若为 cgroup v2（如 Ubuntu 22.04），使用统一根 + cgroupPath，并确保父层级启用了 memory 控制器。
-func GetMemoryCgroupPath(cgroupPath string, autoCreate bool) (dir string, isV2 bool, err error) {
-	if IsCgroupV2() {
-		root := GetCgroupV2Root()
-		dir = path.Join(root, cgroupPath)
-		if autoCreate {
-			// v2 下需在根 cgroup 的 subtree_control 中启用 memory，子 cgroup 才有 memory.* 接口
-			_ = os.WriteFile(cgroupV2SubtreeCtrl, []byte("+memory"), 0644)
-			if err := os.MkdirAll(dir, 0755); err != nil && !os.IsExist(err) {
-				return "", true, fmt.Errorf("create cgroup v2 dir %s: %w", cgroupPath, err)
-			}
-		}
-		return dir, true, nil
-	}
-	// v1: 按 memory subsystem 挂载点查找
-	dir, err = GetCgroupPath("memory", cgroupPath, autoCreate)
-	return dir, false, err
 }

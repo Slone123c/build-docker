@@ -60,8 +60,10 @@ var runCommand = cli.Command{
 			Usage: "memory limit,e.g.: -mem 100m",
 		},
 		cli.StringFlag{
-			Name:  "cpu",
-			Usage: "cpu quota,e.g.: -cpu 100", // 限制进程 cpu 使用率
+			Name: "cpu",
+			// cgroup v2 的 cpu.max 格式为 "quota period"，如 "10000 100000"
+			// 使用时须加引号：-cpu "10000 100000"
+			Usage: `cpu quota, cgroup v2 format "quota period", e.g.: -cpu "10000 100000"`,
 		},
 		cli.StringFlag{
 			Name:  "cpuset",
@@ -85,8 +87,8 @@ var runCommand = cli.Command{
 		tty := context.Bool("it")
 		resConf := &subsystem.ResourceConfig{
 			MemoryLimit: context.String("mem"),
-			CpuShare:    context.String("cpu"),
-			CpuSet:      context.String("cpuset"),
+			CpuQuota:    context.String("cpu"),
+			// CpuSet:      context.String("cpuset"),
 		}
 
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
