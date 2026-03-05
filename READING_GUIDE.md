@@ -10,11 +10,11 @@
 ```
 build-docker/
 ├── main.go                        # 入口：CLI 应用初始化
-├── command.go                     # 命令定义：run / init 子命令
-├── run.go                         # 核心：创建父进程并等待
+├── cli_commands.go                # CLI 层：run / init 子命令定义
+├── container_runner.go            # 调度层：启动容器子进程并等待
 ├── go.mod                         # Go 模块依赖
 └── container/
-    ├── container_process.go       # Linux：创建带命名空间的子进程
+    ├── namespace_process.go       # Linux：创建带命名空间隔离的子进程
     ├── init.go                    # Linux：容器 init 进程逻辑
     └── stub_darwin.go             # macOS：编译桩，不含实际逻辑
 ```
@@ -34,7 +34,7 @@ build-docker/
 
 ---
 
-### 第 2 步 — `command.go`
+### 第 2 步 — `cli_commands.go`
 **目标**：搞清楚两个子命令的职责分工
 
 - `runCommand`：用户直接调用，创建容器
@@ -44,9 +44,10 @@ build-docker/
 
 ---
 
-### 第 3 步 — `run.go`
+### 第 3 步 — `container_runner.go`
 **目标**：理解父进程的创建和等待
 
+- `RunContainer()` 是容器启动的调度入口
 - `NewParentProcess()` 返回什么？
 - `Start()` 和 `Wait()` 分别做什么？
 
@@ -56,7 +57,7 @@ build-docker/
 
 ## 🔧 第二阶段：深入容器核心（实现层）
 
-### 第 4 步 — `container/container_process.go`（仅 Linux）
+### 第 4 步 — `container/namespace_process.go`（仅 Linux）
 **目标**：理解 Linux 命名空间隔离机制
 
 重点关注以下内容：
@@ -115,17 +116,17 @@ build-docker/
     app.Run(os.Args)
          │
          ▼
-     command.go
+     cli_commands.go
     runCommand.Action()
       ├─ 解析 -it 参数 → tty = true
       └─ 解析命令参数 → cmdArray = ["/bin/sh"]
          │
          ▼
-       run.go
-      Run(tty=true, ["/bin/sh"])
+    container_runner.go
+   RunContainer(tty=true, ["/bin/sh"])
          │
          ▼
-  container/container_process.go
+  container/namespace_process.go
   NewParentProcess(tty, cmdArray)
     ├─ args = ["init", "/bin/sh"]
     ├─ cmd = exec.Command("/proc/self/exe", "init", "/bin/sh")

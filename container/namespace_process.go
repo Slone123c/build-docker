@@ -1,5 +1,5 @@
 // ==================================================================================
-// container_process.go — 创建容器父进程（仅 Linux 平台）
+// namespace_process.go — 创建带命名空间隔离的容器子进程（仅 Linux 平台）
 // ==================================================================================
 //
 // 本文件定义了 NewParentProcess() 函数，它是容器创建的核心。
@@ -85,5 +85,6 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
 		cmd.Stderr = os.Stderr // 标准错误：错误信息也输出到终端
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
+	// 返回 (cmd, writePipe, nil)，由 container_runner.go 中的 RunContainer() 负责启动
 	return cmd, writePipe, nil
 }

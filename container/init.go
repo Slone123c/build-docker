@@ -2,11 +2,22 @@
 // init.go — 容器初始化进程（仅 Linux 平台）
 // ==================================================================================
 //
+// ⚠️ 命名说明：本文件中的 "init" 指的是容器的 init 进程（PID 1），
+//    与 Go 语言的 init() 函数（包初始化）完全无关。
+//    "容器 init 进程"是 Linux 中每个 PID 命名空间中的第一个进程，类似于系统启动时的 /sbin/init。
+//
 // 本文件定义了容器的 init 进程逻辑。当子进程在新的 Linux 命名空间中启动后，
 // 会执行这里的 RunContainerInitProcess() 函数来完成容器的初始化：
 //   1. 挂载 /proc 文件系统（让 ps、top 等命令在容器内正常工作）
 //   2. 查找用户命令的可执行文件路径
 //   3. 使用 syscall.Exec 将当前进程替换为用户命令
+//
+// 📁 文件职责分层（从上到下）：
+//
+//   cli_commands.go         → CLI 参数解析，调用 RunContainer()
+//   container_runner.go     → 调度：创建子进程、等待结束
+//   namespace_process.go    → 创建带命名空间隔离的子进程
+//   init.go                 → 容器内 init 进程：挂载 + exec 替换  ← 你在这里
 //
 // ❓ 为什么要用 syscall.Exec 而不是 exec.Command？
 //    syscall.Exec 会"替换"当前进程——不是创建子进程，而是直接将当前进程变成目标程序。
