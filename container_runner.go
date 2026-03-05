@@ -1,9 +1,17 @@
 // ==================================================================================
-// run.go — 容器运行入口
+// container_runner.go — 容器运行调度器
 // ==================================================================================
 //
-// 本文件定义了 Run() 函数，它是创建和运行容器的核心入口。
-// 由 command.go 中的 runCommand 调用。
+// 本文件定义了 RunContainer() 函数，它是启动容器的核心调度入口。
+// 由 cli_commands.go 中的 runCommand 调用。
+//
+// 📁 文件职责分层：
+//
+//   cli_commands.go      → 解析 CLI 参数，调用 RunContainer()
+//   container_runner.go  → 调度：创建子进程、等待结束     ← 你在这里
+//   container/
+//     namespace_process.go → 创建带命名空间隔离的子进程
+//     init.go              → 容器 init 进程的实际初始化逻辑
 //
 // ==================================================================================
 
@@ -19,11 +27,12 @@ import (
 	log "github.com/sirupsen/logrus" // 日志库
 )
 
-// Run 是创建和运行容器的入口函数
+// RunContainer 是启动容器的调度入口函数
 //
 // 参数说明：
 //   - tty:      是否开启交互式终端（当 -it 参数被传入时为 true）
 //   - cmdArray: 用户指定的命令及其参数，如 ["/bin/sh"] 或 ["/bin/ls", "-l"]
+//   - res:      资源限制配置（如 -mem、-cpu、-cpuset），用于 cgroup 限制
 //
 // 🔄 执行流程：
 //  1. 调用 container.NewParentProcess() 创建一个配置了 Linux 命名空间的子进程命令
@@ -31,7 +40,7 @@ import (
 //     → 子进程会执行 /proc/self/exe init <cmd>，最终触发 initCommand
 //  3. parent.Wait() 等待子进程结束
 //     → 类似于在终端执行一条命令后等它跑完
-func Run(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
+func RunContainer(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty)

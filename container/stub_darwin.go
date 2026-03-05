@@ -25,6 +25,7 @@ package container
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -34,7 +35,7 @@ import (
 // 如果被调用会直接 panic，提醒开发者需要在 Linux 上运行。
 //
 // 如需在 Linux 上运行，请使用：GOOS=linux go build
-func NewParentProcess(tty bool, cmdArray []string) *exec.Cmd {
+func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
 	panic("NewParentProcess is only supported on Linux")
 }
 
