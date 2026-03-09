@@ -45,7 +45,7 @@ import (
 	"github.com/sirupsen/logrus" // 日志库
 )
 
-const PIVOT_ROOT = "/root/rootfs/busybox"
+const PIVOT_ROOT = "/root/rootfs"
 
 // RunContainerInitProcess 是容器内部的 init 进程入口
 //
@@ -157,6 +157,10 @@ func setUpMount() {
 		logrus.Errorf("mount private error: %v", err)
 	}
 
+	if err := NewWorkSpace(PIVOT_ROOT); err != nil {
+		logrus.Errorf("new workspace error: %v", err)
+	}
+
 	// ── 关键步骤：执行 pivot_root 切换根目录 ──
 	//
 	// ❓ 为什么需要这一步？
@@ -170,7 +174,7 @@ func setUpMount() {
 	//
 	// ⚠️ 注意：pivot_root 只能在已挂载了新根目录（newRoot）的前提下使用。
 	//    所以这一步必须在 setUpMount() 之后执行。
-	if err := setUpPivotRoot(PIVOT_ROOT); err != nil {
+	if err := setUpPivotRoot(PIVOT_ROOT + "/merged"); err != nil {
 		logrus.Errorf("set up pivot root error: %v", err)
 	}
 

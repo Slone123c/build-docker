@@ -65,6 +65,7 @@ func RunContainer(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
 	}
 	sendInitCommand(cmdArray, writePipe)
 
+	defer container.DeleteWorkSpace(container.PIVOT_ROOT)
 	// 等待子进程运行结束
 	// Wait() 会阻塞，直到子进程退出
 	// 子进程内部会用 syscall.Exec 替换为用户命令（如 /bin/sh），
