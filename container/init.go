@@ -34,14 +34,18 @@ package container
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus" // 日志库
 )
+
+const PIVOT_ROOT = "/root/rootfs/busybox"
 
 // RunContainerInitProcess 是容器内部的 init 进程入口
 //
@@ -153,6 +157,23 @@ func setUpMount() {
 		logrus.Errorf("mount private error: %v", err)
 	}
 
+	// ── 关键步骤：执行 pivot_root 切换根目录 ──
+	//
+	// ❓ 为什么需要这一步？
+	//    我们希望容器内部看到的是我们准备好的 rootfs 目录（/root/rootfs/rootfs），
+	//    而不是宿主机的真实根目录（/）。
+	//    pivot_root 系统调用可以将当前进程的根目录切换到指定目录。
+	//
+	// 参数说明：
+	//   - newRoot:    新的根目录（我们准备好的 rootfs）
+	//   - putOld:     旧的根目录（宿主机根目录）的临时存放位置
+	//
+	// ⚠️ 注意：pivot_root 只能在已挂载了新根目录（newRoot）的前提下使用。
+	//    所以这一步必须在 setUpMount() 之后执行。
+	if err := setUpPivotRoot(PIVOT_ROOT); err != nil {
+		logrus.Errorf("set up pivot root error: %v", err)
+	}
+
 	// 组合挂载标志：禁止执行程序 + 禁止 SUID + 禁止设备访问
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 
@@ -166,4 +187,54 @@ func setUpMount() {
 	if err := syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), ""); err != nil {
 		logrus.Errorf("mount proc error: %v", err)
 	}
+}
+
+// setUpPivotRoot 是实现真正文件系统隔离的核心函数！
+// 它的目标是把当前的根文件系统切换到传入的 root 目录（比如 busybox 所在目录）。
+func setUpPivotRoot(root string) error {
+	// ── 第 1 步：Bind Mount 自身 ──
+	// 为了让 root 目录成为一个独立的挂载点，满足 pivot_root 的条件。
+	// 请在这里使用 syscall.Mount 进行 bind mount 自己（标志使用 syscall.MS_BIND | syscall.MS_REC）
+	// YOUR CODE HERE...
+	flags := syscall.MS_BIND | syscall.MS_REC
+	if err := syscall.Mount(root, root, "bind", uintptr(flags), ""); err != nil {
+		return fmt.Errorf("mount bind error: %v", err)
+	}
+	// ── 第 2 步：创建 put_old 目录 ──
+	// 在新的 root 目录下建立一个名为 .put_old 的目录，用来临时存放原来的宿主机根目录。
+	// 注意需要拼好路径（root + "/.put_old"）。
+	// YOUR CODE HERE...
+	oldPath := filepath.Join(root, ".put_old")
+	if err := os.Mkdir(oldPath, 0777); err != nil {
+		return fmt.Errorf("mkdir error: %v", err)
+	}
+	// ── 第 3 步：调用 pivot_root ──
+	// 调用 syscall.PivotRoot 系统调用，把当前的根（宿主机 /）移到 .put_old 目录，
+	// 并把新的 root 目录提升为真正的容器根目录。
+	// YOUR CODE HERE...
+	if err := syscall.PivotRoot(root, oldPath); err != nil {
+		return fmt.Errorf("pivot root error: %v", err)
+	}
+	// ── 第 4 步：切换工作目录 ──
+	// 上一步执行完后，当前进程的工作目录（CWD）可能还在老的地方或者没有明确。
+	// 所以需要调用 syscall.Chdir("/")，确保当前进程的工作目录切换到容器里全新的 "/"。
+	// YOUR CODE HERE...
+	if err := syscall.Chdir("/"); err != nil {
+		return fmt.Errorf("chdir error: %v", err)
+	}
+	// ── 第 5 步：卸载并删除旧根目录 ──
+	// 旧根目录已经被挂载到了 /.put_old。我们需要：
+	// 1. 取消挂载（umount2），使用 MNT_DETACH 标志（懒卸载，即使被占用也会在释放后自动卸载）。
+	// 2. 删除（rmdir）空出的 /.put_old 目录。
+	// YOUR CODE HERE...
+	putOld := filepath.Join("/", ".put_old")
+	if err := syscall.Unmount(putOld, syscall.MNT_DETACH); err != nil {
+		return fmt.Errorf("umount error: %v", err)
+	}
+
+	if err := os.Remove(putOld); err != nil {
+		return fmt.Errorf("os remove error: %v", err)
+	}
+
+	return nil
 }
