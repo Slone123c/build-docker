@@ -47,7 +47,11 @@ func (s *CpuQuotaSubsystem) Remove(cgroupPath string) error {
 	// cgroup v2：必须先写 cgroup.kill=1，内核才会把该 cgroup 下所有进程迁走，
 	// 之后才能用 os.Remove 删除空目录。直接 RemoveAll 会报 "operation not permitted"。
 	_ = os.WriteFile(path.Join(dir, "cgroup.kill"), []byte("1"), 0644)
-	return os.Remove(dir)
+	err = os.Remove(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func (s *CpuQuotaSubsystem) Name() string {
