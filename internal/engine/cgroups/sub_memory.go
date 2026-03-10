@@ -1,4 +1,4 @@
-package subsystem
+package cgroups
 
 import (
 	"fmt"

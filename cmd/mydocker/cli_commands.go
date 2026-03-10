@@ -27,8 +27,9 @@ package main
 import (
 	"fmt"
 
-	"build-docker/container" // 引入容器相关逻辑的子包
-	"build-docker/subsystem"
+	"build-docker/internal/engine"
+	"build-docker/internal/engine/cgroups"
+	"build-docker/internal/engine/container" // 引入容器相关逻辑的子包
 
 	log "github.com/sirupsen/logrus" // 日志库
 	"github.com/urfave/cli"          // CLI 框架
@@ -85,7 +86,7 @@ var runCommand = cli.Command{
 			cmdArray = append(cmdArray, arg)
 		}
 		tty := context.Bool("it")
-		resConf := &subsystem.ResourceConfig{
+		resConf := &cgroups.ResourceConfig{
 			MemoryLimit: context.String("mem"),
 			CpuQuota:    context.String("cpu"),
 			// CpuSet:      context.String("cpuset"),
@@ -93,7 +94,7 @@ var runCommand = cli.Command{
 
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		RunContainer(tty, cmdArray, resConf)
+		engine.RunContainer(tty, cmdArray, resConf)
 		return nil
 	},
 }

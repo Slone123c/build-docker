@@ -42,10 +42,10 @@ import (
 	"strings"
 	"syscall"
 
+	"build-docker/internal/engine/fs"
+
 	"github.com/sirupsen/logrus" // 日志库
 )
-
-const PIVOT_ROOT = "/root/rootfs"
 
 // RunContainerInitProcess 是容器内部的 init 进程入口
 //
@@ -157,7 +157,7 @@ func setUpMount() {
 		logrus.Errorf("mount private error: %v", err)
 	}
 
-	if err := NewWorkSpace(PIVOT_ROOT); err != nil {
+	if err := fs.NewWorkSpace(fs.RootPath); err != nil {
 		logrus.Errorf("new workspace error: %v", err)
 	}
 
@@ -174,7 +174,7 @@ func setUpMount() {
 	//
 	// ⚠️ 注意：pivot_root 只能在已挂载了新根目录（newRoot）的前提下使用。
 	//    所以这一步必须在 setUpMount() 之后执行。
-	if err := setUpPivotRoot(PIVOT_ROOT + "/merged"); err != nil {
+	if err := setUpPivotRoot(fs.RootPath + "/merged"); err != nil {
 		logrus.Errorf("set up pivot root error: %v", err)
 	}
 

@@ -27,6 +27,9 @@ go.work.sum
 *.swp
 *.swo
 .cursor
+.qoder
+.serena
+.claude
 
 # OS generated files
 .DS_Store
@@ -37,3 +40,5 @@ go.work.sum
 ehthumbs.db
 Thumbs.db
 ref
+rootfs*
+todos

@@ -15,11 +15,12 @@
 //
 // ==================================================================================
 
-package main
+package engine
 
 import (
-	"build-docker/container" // 容器子包，负责创建进程和初始化容器
-	"build-docker/subsystem"
+	"build-docker/internal/engine/cgroups"
+	"build-docker/internal/engine/container" // 容器子包，负责创建进程和初始化容器
+	"build-docker/internal/engine/fs"
 	"os"
 	"strings"
 
@@ -40,7 +41,7 @@ import (
 //     → 子进程会执行 /proc/self/exe init <cmd>，最终触发 initCommand
 //  3. parent.Wait() 等待子进程结束
 //     → 类似于在终端执行一条命令后等它跑完
-func RunContainer(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
+func RunContainer(tty bool, cmdArray []string, res *cgroups.ResourceConfig) {
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty)
@@ -55,7 +56,7 @@ func RunContainer(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
 		log.Fatal(err) // 启动失败则打印错误并退出
 	}
 
-	cgroupManager := NewCgroupManager("mydocker-cgroup")
+	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
 	defer cgroupManager.Destroy()
 	if err := cgroupManager.Set(res); err != nil {
 		log.Warnf("cgroup set error: %v", err)
@@ -65,7 +66,7 @@ func RunContainer(tty bool, cmdArray []string, res *subsystem.ResourceConfig) {
 	}
 	sendInitCommand(cmdArray, writePipe)
 
-	defer container.DeleteWorkSpace(container.PIVOT_ROOT)
+	defer fs.DeleteWorkSpace(fs.RootPath)
 	// 等待子进程运行结束
 	// Wait() 会阻塞，直到子进程退出
 	// 子进程内部会用 syscall.Exec 替换为用户命令（如 /bin/sh），
