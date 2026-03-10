@@ -1,4 +1,6 @@
-package container
+//go:build linux
+
+package fs
 
 import (
 	"fmt"
@@ -7,6 +9,7 @@ import (
 	"syscall"
 )
 
+const RootPath = "/root/rootfs"
 const lowerDir = "busybox"
 
 // NewWorkSpace 负责创建一个支持 OverlayFS 的隔离工作区
