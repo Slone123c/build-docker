@@ -51,7 +51,7 @@ import (
 //  3. 通过 SysProcAttr.Cloneflags 配置 Linux 命名空间
 //     → 子进程启动时就已经在新的命名空间中了
 //  4. 如果 tty=true，将子进程的 IO 连接到终端
-func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
+func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File, error) {
 
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
@@ -86,6 +86,8 @@ func NewParentProcess(tty bool) (*exec.Cmd, *os.File, error) {
 		Setctty: true,
 		Ctty:    0, // fd=0 = stdin（已通过 cmd.Stdin = os.Stdin 连接到 TTY）
 	}
+
+	cmd.Env = append(os.Environ(), "volume="+volume)
 
 	// 如果开启了交互模式（-it），将子进程的标准 IO 连接到当前终端
 	// 这样用户就可以直接在终端与容器内的进程交互（比如使用 /bin/sh）

@@ -161,6 +161,13 @@ func setUpMount() {
 		logrus.Errorf("new workspace error: %v", err)
 	}
 
+	volume := os.Getenv("volume")
+	if volume != "" {
+		if err := fs.MountVolume(fs.RootPath, volume); err != nil {
+			logrus.Errorf("mount volume error: %v", err)
+		}
+	}
+
 	// ── 关键步骤：执行 pivot_root 切换根目录 ──
 	//
 	// ❓ 为什么需要这一步？
