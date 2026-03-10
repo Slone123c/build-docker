@@ -70,6 +70,10 @@ var runCommand = cli.Command{
 			Name:  "cpuset",
 			Usage: "cpuset limit,e.g.: -cpuset 2,4", // 限制进程 cpu 使用率
 		},
+		cli.StringFlag{
+			Name:  "volume",
+			Usage: "volume,e.g.: -volume /host/path:/container/path",
+		},
 	},
 
 	// Action 是当用户执行 run 命令时实际执行的函数
@@ -86,6 +90,7 @@ var runCommand = cli.Command{
 			cmdArray = append(cmdArray, arg)
 		}
 		tty := context.Bool("it")
+		volume := context.String("volume")
 		resConf := &cgroups.ResourceConfig{
 			MemoryLimit: context.String("mem"),
 			CpuQuota:    context.String("cpu"),
@@ -94,7 +99,7 @@ var runCommand = cli.Command{
 
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		engine.RunContainer(tty, cmdArray, resConf)
+		engine.RunContainer(tty, cmdArray, resConf, volume)
 		return nil
 	},
 }
