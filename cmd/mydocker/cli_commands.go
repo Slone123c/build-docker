@@ -53,6 +53,11 @@ var runCommand = cli.Command{
 
 	// Flags 定义了该命令支持的参数/选项
 	Flags: []cli.Flag{
+
+		cli.BoolFlag{
+			Name:  "d",
+			Usage: "detach mode",
+		},
 		// BoolFlag 表示一个布尔类型的标志（不需要值，出现即为 true）
 		cli.BoolFlag{
 			Name:  "it",                                       // 参数名称，用户通过 -it 来使用
@@ -92,6 +97,10 @@ var runCommand = cli.Command{
 			cmdArray = append(cmdArray, arg)
 		}
 		tty := context.Bool("it")
+		detach := context.Bool("d")
+		if tty && detach {
+			return fmt.Errorf("cannot run container with both -it and -d")
+		}
 		volume := context.String("volume")
 		resConf := &cgroups.ResourceConfig{
 			MemoryLimit: context.String("mem"),
@@ -101,7 +110,7 @@ var runCommand = cli.Command{
 
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		engine.RunContainer(tty, cmdArray, resConf, volume)
+		engine.RunContainer(tty, detach, cmdArray, resConf, volume)
 		return nil
 	},
 }
