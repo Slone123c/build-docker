@@ -157,10 +157,6 @@ func setUpMount() {
 		logrus.Errorf("mount private error: %v", err)
 	}
 
-	if err := fs.NewWorkSpace(fs.RootPath); err != nil {
-		logrus.Errorf("new workspace error: %v", err)
-	}
-
 	volume := os.Getenv("volume")
 	if volume != "" {
 		if err := fs.MountVolume(fs.RootPath, volume); err != nil {
