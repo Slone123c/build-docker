@@ -41,7 +41,7 @@ import (
 //     → 子进程会执行 /proc/self/exe init <cmd>，最终触发 initCommand
 //  3. parent.Wait() 等待子进程结束
 //     → 类似于在终端执行一条命令后等它跑完
-func RunContainer(tty bool, cmdArray []string, res *cgroups.ResourceConfig, volume string) {
+func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConfig, volume string) {
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty, volume)
@@ -71,6 +71,14 @@ func RunContainer(tty bool, cmdArray []string, res *cgroups.ResourceConfig, volu
 		log.Errorf("cgroup apply error: %v (memory limit may not take effect)", err)
 	}
 	sendInitCommand(cmdArray, writePipe)
+
+	if detach {
+		log.Infof("Container running in background. Container PID is %d", parent.Process.Pid)
+		// os.Exit(0) will cause the parent to exit without executing deferred
+		// statements. This intentionally leaves the container's workspace and
+		// cgroups alive.
+		os.Exit(0)
+	}
 
 	// 等待子进程运行结束
 	// Wait() 会阻塞，直到子进程退出

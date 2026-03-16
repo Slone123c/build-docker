@@ -70,21 +70,6 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File, error) {
 			syscall.CLONE_NEWNS | //   MNT 命名空间：隔离文件系统挂载点
 			syscall.CLONE_NEWNET | //  NET 命名空间：隔离网络栈（网卡、IP、端口等）
 			syscall.CLONE_NEWIPC, //   IPC 命名空间：隔离进程间通信资源
-		// ✅ Setsid：让子进程成为新 Session 的 Leader（与父进程 Session 彻底隔离）
-		//    这样 Ctrl+C 等信号不会跨越 Session 影响到父进程（mydocker）。
-		Setsid: true,
-		// ✅ Setctty + Ctty：将 fd=0（stdin/TTY）设为新 Session 的控制终端
-		//
-		//    ⚠️ Go runtime 的规则：必须同时设置这两个字段！
-		//       - Setctty: true  → 告诉 Go runtime 执行 ioctl(fd, TIOCSCTTY, 1)
-		//       - Ctty: 0        → 指定用哪个 fd（0=stdin，即 TTY）
-		//    只设置 Ctty 而不设置 Setctty，Go 会完全忽略 Ctty 字段，没有任何效果！
-		//
-		//    没有控制终端时，bash 调用 tcsetpgrp() 会返回 ENOTTY：
-		//    "cannot set terminal process group (-1): Inappropriate ioctl for device"
-		//    并禁用 job control 后直接退出。
-		Setctty: true,
-		Ctty:    0, // fd=0 = stdin（已通过 cmd.Stdin = os.Stdin 连接到 TTY）
 	}
 
 	cmd.Env = append(os.Environ(), "volume="+volume)
@@ -95,6 +80,22 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File, error) {
 		cmd.Stdin = os.Stdin   // 标准输入：从终端读取用户输入
 		cmd.Stdout = os.Stdout // 标准输出：输出到终端
 		cmd.Stderr = os.Stderr // 标准错误：错误信息也输出到终端
+		// ✅ Setctty + Ctty：将 fd=0（stdin/TTY）设为新 Session 的控制终端
+		//
+		//    ⚠️ Go runtime 的规则：必须同时设置这两个字段！
+		//       - Setctty: true  → 告诉 Go runtime 执行 ioctl(fd, TIOCSCTTY, 1)
+		//       - Ctty: 0        → 指定用哪个 fd（0=stdin，即 TTY）
+		//    只设置 Ctty 而不设置 Setctty，Go 会完全忽略 Ctty 字段，没有任何效果！
+		//
+		//    没有控制终端时，bash 调用 tcsetpgrp() 会返回 ENOTTY：
+		//    "cannot set terminal process group (-1): Inappropriate ioctl for device"
+		//    并禁用 job control 后直接退出。
+		cmd.SysProcAttr.Setctty = true // 设置控制终端
+		// ✅ Setsid：让子进程成为新 Session 的 Leader（与父进程 Session 彻底隔离）
+		//    这样 Ctrl+C 等信号不会跨越 Session 影响到父进程（mydocker）。
+		cmd.SysProcAttr.Setsid = true // 设置会话组
+		// fd=0 = stdin（已通过 cmd.Stdin = os.Stdin 连接到 TTY）
+		cmd.SysProcAttr.Ctty = 0 // 设置控制终端文件描述符
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// 返回 (cmd, writePipe, nil)，由 container_runner.go 中的 RunContainer() 负责启动
