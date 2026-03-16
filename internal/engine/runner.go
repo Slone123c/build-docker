@@ -49,6 +49,12 @@ func RunContainer(tty bool, cmdArray []string, res *cgroups.ResourceConfig, volu
 		logrus.Errorf("New parent process error")
 		return
 	}
+	// 挂载 OverlayFS
+	if err := fs.NewWorkSpace(fs.RootPath); err != nil {
+		logrus.Errorf("new workspace error: %v", err)
+		return
+	}
+	defer fs.DeleteWorkSpace(fs.RootPath)
 
 	// 启动子进程
 	// Start() 不会等待进程结束，只是将子进程启动起来
@@ -66,7 +72,6 @@ func RunContainer(tty bool, cmdArray []string, res *cgroups.ResourceConfig, volu
 	}
 	sendInitCommand(cmdArray, writePipe)
 
-	defer fs.DeleteWorkSpace(fs.RootPath)
 	// 等待子进程运行结束
 	// Wait() 会阻塞，直到子进程退出
 	// 子进程内部会用 syscall.Exec 替换为用户命令（如 /bin/sh），

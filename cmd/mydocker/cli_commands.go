@@ -26,6 +26,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"build-docker/internal/engine"
 	"build-docker/internal/engine/cgroups"
@@ -130,5 +132,32 @@ var initCommand = cli.Command{
 		// 该函数会：1) 挂载 /proc  2) 查找用户命令的路径  3) 用 syscall.Exec 替换当前进程
 		err := container.RunContainerInitProcess()
 		return err
+	},
+}
+
+const IMAGE_DIR = "/root/images"
+
+var commitCommand = cli.Command{
+	Name:  "commit",
+	Usage: "Commit a container into an image",
+	Action: func(context *cli.Context) error {
+		if context.NArg() < 1 {
+			return fmt.Errorf("missing image name")
+		}
+		imageName := context.Args().Get(0)
+		mergedPath := "/root/rootfs/merged"
+		imageTar := IMAGE_DIR + "/" + imageName + ".tar"
+		log.Infof("commit from %s to %s", mergedPath, imageTar)
+
+		if err := os.MkdirAll(IMAGE_DIR, 0777); err != nil {
+			return fmt.Errorf("mkdir image dir failed: %v", err)
+		}
+
+		_, err := exec.Command("tar", "-czf", imageTar, "-C", mergedPath, ".").CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("tar commit failed: %v", err)
+		}
+		log.Infof("commit success")
+		return nil
 	},
 }
