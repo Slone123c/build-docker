@@ -53,7 +53,6 @@ var runCommand = cli.Command{
 
 	// Flags 定义了该命令支持的参数/选项
 	Flags: []cli.Flag{
-
 		cli.BoolFlag{
 			Name:  "d",
 			Usage: "detach mode",
@@ -81,6 +80,10 @@ var runCommand = cli.Command{
 			Name:  "volume",
 			Usage: "volume,e.g.: -volume /host/path:/container/path",
 		},
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "container name",
+		},
 	},
 
 	// Action 是当用户执行 run 命令时实际执行的函数
@@ -98,6 +101,7 @@ var runCommand = cli.Command{
 		}
 		tty := context.Bool("it")
 		detach := context.Bool("d")
+		containerName := context.String("name")
 		if tty && detach {
 			return fmt.Errorf("cannot run container with both -it and -d")
 		}
@@ -110,7 +114,7 @@ var runCommand = cli.Command{
 
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		engine.RunContainer(tty, detach, cmdArray, resConf, volume)
+		engine.RunContainer(tty, detach, cmdArray, resConf, volume, containerName)
 		return nil
 	},
 }
