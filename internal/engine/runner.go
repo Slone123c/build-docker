@@ -41,7 +41,7 @@ import (
 //     → 子进程会执行 /proc/self/exe init <cmd>，最终触发 initCommand
 //  3. parent.Wait() 等待子进程结束
 //     → 类似于在终端执行一条命令后等它跑完
-func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConfig, volume string) {
+func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConfig, volume string, containerName string) {
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty, volume)
@@ -61,6 +61,19 @@ func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConf
 	if err := parent.Start(); err != nil {
 		log.Fatal(err) // 启动失败则打印错误并退出
 	}
+	// 记录信息
+	containerId := container.RandContainerName(10)
+	err = container.RecordContainerInfo(container.InitInfo{
+		ContainerPID:  parent.Process.Pid,
+		ContainerName: containerName,
+		CommandArray:  cmdArray,
+		ContainerId:   containerId,
+	})
+	if err != nil {
+		log.Errorf("record container info error: %v", err)
+		return
+	}
+	defer container.DeleteContainerInfo(containerId)
 
 	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
 	defer cgroupManager.Destroy()
