@@ -13,6 +13,7 @@ import (
 )
 
 var DefaultInfoLocation = "/var/run/mydocker/%s/"
+var DefaultInfoBaseDir = "/var/run/mydocker/"
 var ConfigName = "config.json"
 
 func RandContainerName(n int) string {
