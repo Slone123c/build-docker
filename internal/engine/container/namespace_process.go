@@ -28,6 +28,7 @@
 package container
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
@@ -51,7 +52,7 @@ import (
 //  3. 通过 SysProcAttr.Cloneflags 配置 Linux 命名空间
 //     → 子进程启动时就已经在新的命名空间中了
 //  4. 如果 tty=true，将子进程的 IO 连接到终端
-func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File, error) {
+func NewParentProcess(tty bool, volume string, containerName string) (*exec.Cmd, *os.File, error) {
 
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
@@ -96,6 +97,22 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File, error) {
 		cmd.SysProcAttr.Setsid = true // 设置会话组
 		// fd=0 = stdin（已通过 cmd.Stdin = os.Stdin 连接到 TTY）
 		cmd.SysProcAttr.Ctty = 0 // 设置控制终端文件描述符
+	} else {
+		// 创建容器目录（不包含 log.log 文件名）
+		containerDir := fmt.Sprintf(DefaultInfoLocation, containerName)
+		if err := os.MkdirAll(containerDir, 0755); err != nil {
+			logrus.Errorf("mkdir log directory error: %v", err)
+			return nil, nil, err
+		}
+		// 创建日志文件
+		logFilePath := containerDir + "log.log"
+		logFile, err := os.Create(logFilePath)
+		if err != nil {
+			logrus.Errorf("create log file error: %v", err)
+			return nil, nil, err
+		}
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// 返回 (cmd, writePipe, nil)，由 container_runner.go 中的 RunContainer() 负责启动

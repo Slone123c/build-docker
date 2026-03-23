@@ -20,6 +20,7 @@ func ListContainers() {
 		containerInfo, err := getContainerInfo(file)
 		if err != nil {
 			log.Errorf("get container info error: %v", err)
+			continue // 跳过错误的容器，不要添加 nil
 		}
 		containers = append(containers, containerInfo)
 	}

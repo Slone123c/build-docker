@@ -60,11 +60,11 @@ func RecordContainerInfo(r InitInfo) error {
 	}
 	jsonStr := string(jsonBytes)
 	dirUrl := fmt.Sprintf(DefaultInfoLocation, r.ContainerId)
-	if err := os.MkdirAll(dirUrl, 0622); err != nil {
+	if err := os.MkdirAll(dirUrl, 0755); err != nil {
 		return err
 	}
-	fileName := dirUrl + "/" + ConfigName
-	if err := os.WriteFile(fileName, []byte(jsonStr), 0622); err != nil {
+	fileName := dirUrl + ConfigName
+	if err := os.WriteFile(fileName, []byte(jsonStr), 0644); err != nil {
 		return err
 	}
 	return nil

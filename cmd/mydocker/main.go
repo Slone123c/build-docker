@@ -49,6 +49,7 @@ func main() {
 		runCommand,  // run  命令：创建并运行一个新容器
 		commitCommand,
 		listCommand,
+		logCommand,
 	}
 
 	// ── 第 3 步：设置全局初始化钩子 ──
