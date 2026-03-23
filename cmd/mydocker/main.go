@@ -50,6 +50,7 @@ func main() {
 		commitCommand,
 		listCommand,
 		logCommand,
+		execCommand,
 	}
 
 	// ── 第 3 步：设置全局初始化钩子 ──
