@@ -196,3 +196,22 @@ var logCommand = cli.Command{
 		return nil
 	},
 }
+
+var execCommand = cli.Command{
+	Name:  "exec",
+	Usage: "Execute a command in a running container: mydocker exec <container> <command>",
+	Action: func(context *cli.Context) error {
+		if os.Getenv(engine.ExecPidEnv) != "" {
+			return nil
+		}
+
+		if context.NArg() < 2 {
+			return fmt.Errorf("usage: mydocker exec <container> <command>")
+		}
+
+		containerName := context.Args().Get(0)
+		cmdArray := context.Args().Tail()
+		engine.ExecContainer(containerName, cmdArray)
+		return nil
+	},
+}
