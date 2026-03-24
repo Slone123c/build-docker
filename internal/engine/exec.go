@@ -51,7 +51,7 @@ func getContainerPid(name string) (string, error) {
 	}
 
 	for _, f := range files {
-		path := container.DefaultInfoBaseDir + f.Name() + "/" + container.ConfigName
+		path := container.DefaultInfoBaseDir + f.Name() + "/" + container.CONFIG_NAME
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return "", err

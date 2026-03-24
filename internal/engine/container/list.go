@@ -50,7 +50,7 @@ func ListContainers() {
 }
 
 func getContainerInfo(file os.DirEntry) (*Info, error) {
-	filePath := DefaultInfoBaseDir + file.Name() + "/" + ConfigName
+	filePath := DefaultInfoBaseDir + file.Name() + "/" + CONFIG_NAME
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Errorf("read file error: %v", err)
