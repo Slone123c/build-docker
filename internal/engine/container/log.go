@@ -47,7 +47,7 @@ func findContainerIdByName(name string) (string, error) {
 	}
 
 	for _, file := range files {
-		configPath := DefaultInfoBaseDir + file.Name() + "/" + ConfigName
+		configPath := DefaultInfoBaseDir + file.Name() + "/" + CONFIG_NAME
 		content, err := os.ReadFile(configPath)
 		if err != nil {
 			continue
