@@ -41,7 +41,7 @@ type InitInfo struct {
 	ContainerId   string
 }
 
-func RecordContainerInfo(r InitInfo) error {
+func CreateContainerInfo(r InitInfo) error {
 	if r.ContainerName == "" {
 		r.ContainerName = r.ContainerId
 	}
