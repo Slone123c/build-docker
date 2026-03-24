@@ -44,7 +44,7 @@ import (
 func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConfig, volume string, containerName string) {
 	// 先生成容器 ID，确保后续使用一致的标识
 	containerId := container.RandContainerName(10)
-	
+
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty, volume, containerId)
@@ -65,7 +65,7 @@ func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConf
 		log.Fatal(err) // 启动失败则打印错误并退出
 	}
 	// 记录信息
-	err = container.RecordContainerInfo(container.InitInfo{
+	err = container.CreateContainerInfo(container.InitInfo{
 		ContainerPID:  parent.Process.Pid,
 		ContainerName: containerName,
 		CommandArray:  cmdArray,
