@@ -51,6 +51,7 @@ func main() {
 		listCommand,
 		logCommand,
 		execCommand,
+		stopCommand,
 	}
 
 	// ── 第 3 步：设置全局初始化钩子 ──
