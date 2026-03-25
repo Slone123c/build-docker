@@ -215,3 +215,16 @@ var execCommand = cli.Command{
 		return nil
 	},
 }
+
+var stopCommand = cli.Command{
+	Name:  "stop",
+	Usage: "Stop a running container: mydocker stop <container>",
+	Action: func(context *cli.Context) error {
+		if context.NArg() < 1 {
+			return fmt.Errorf("missing container id")
+		}
+		containerName := context.Args().Get(0)
+		engine.StopContainer(containerName)
+		return nil
+	},
+}
