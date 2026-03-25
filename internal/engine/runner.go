@@ -53,11 +53,11 @@ func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConf
 		return
 	}
 	// 挂载 OverlayFS
-	if err := fs.NewWorkSpace(fs.RootPath); err != nil {
+	if err := fs.NewWorkSpace(fs.RootPath, containerId); err != nil {
 		logrus.Errorf("new workspace error: %v", err)
 		return
 	}
-	defer fs.DeleteWorkSpace(fs.RootPath)
+	defer fs.DeleteWorkSpace(fs.RootPath, containerId)
 
 	// 启动子进程
 	// Start() 不会等待进程结束，只是将子进程启动起来

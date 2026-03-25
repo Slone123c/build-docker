@@ -12,6 +12,10 @@ import (
 const RootPath = "/root/rootfs"
 const lowerDir = "busybox"
 
+func containerWorkDir(rootPath, containerID string) string {
+	return filepath.Join(rootPath, containerID)
+}
+
 // NewWorkSpace 负责创建一个支持 OverlayFS 的隔离工作区
 //
 // rootPath: 我们工作区的根目录（比如 /root/rootfs）。
@@ -20,17 +24,21 @@ const lowerDir = "busybox"
 //   - upper: 容器内产生的新文件和变动存放在这里（可写层）
 //   - work:  OverlayFS 内部使用的工作目录（不用管内容，必须有）
 //   - merged: 将 lower 和 upper 合并起来挂载到这里的目录（容器最终看到的世界）
-func NewWorkSpace(rootPath string) error {
+func NewWorkSpace(rootPath string, containerID string) error {
 	// ── 第 1 步：准备这 4 个目录的绝对路径 ──
-	lower := filepath.Join(rootPath, lowerDir)
-	upper := filepath.Join(rootPath, "upper")
-	work := filepath.Join(rootPath, "work")
-	merged := filepath.Join(rootPath, "merged")
+	workDir := containerWorkDir(rootPath, containerID)
+	lower := filepath.Join(workDir, lowerDir)
+	upper := filepath.Join(workDir, "upper")
+	work := filepath.Join(workDir, "work")
+	merged := filepath.Join(workDir, "merged")
+
+	if _, err := os.Stat(lower); os.IsNotExist(err) {
+		return fmt.Errorf("lower directory does not exist: %s", lower)
+	}
 
 	// ── 第 2 步：创建 upper, work, merged 目录 ──
 	// 使用 os.MkdirAll 帮它们创建出来，权限可以用 0777。
 	// 注意：lower 目录应该已经放好了 busybox，不需要创建。
-	// YOUR CODE HERE...
 	os.MkdirAll(upper, 0777)
 	os.MkdirAll(work, 0777)
 	os.MkdirAll(merged, 0777)
@@ -58,12 +66,15 @@ func NewWorkSpace(rootPath string) error {
 	return nil
 }
 
-func DeleteWorkSpace(rootPath string) error {
-	merged := filepath.Join(rootPath, "merged")
-	syscall.Unmount(merged, syscall.MNT_DETACH)
+func DeleteWorkSpace(rootPath, containerID string) error {
+	workDir := containerWorkDir(rootPath, containerID)
+	merged := filepath.Join(workDir, "merged")
+	if err := syscall.Unmount(merged, syscall.MNT_DETACH); err != nil {
+		fmt.Printf("warning: unmount %s error: %v", merged, err)
+	}
 
-	os.RemoveAll(filepath.Join(rootPath, "upper"))
-	os.RemoveAll(filepath.Join(rootPath, "work"))
-	os.RemoveAll(filepath.Join(rootPath, "merged"))
+	if err := os.RemoveAll(workDir); err != nil {
+		return fmt.Errorf("remove workspace %s: %w", workDir, err)
+	}
 	return nil
 }

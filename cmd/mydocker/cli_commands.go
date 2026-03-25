@@ -228,3 +228,17 @@ var stopCommand = cli.Command{
 		return nil
 	},
 }
+
+var rmCommand = cli.Command{
+	Name:  "rm",
+	Usage: "Remove a stopped container: mydocker rm [-f] <container>",
+	Action: func(context *cli.Context) error {
+		if context.NArg() < 1 {
+			return fmt.Errorf("missing container id")
+		}
+		containerName := context.Args().Get(0)
+		force := context.Bool("f")
+		engine.RemoveContainer(containerName, force)
+		return nil
+	},
+}
