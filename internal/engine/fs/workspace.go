@@ -21,13 +21,13 @@ func containerWorkDir(rootPath, containerID string) string {
 // rootPath: 我们工作区的根目录（比如 /root/rootfs）。
 // 我们约定在这个目录下会有 4 个子目录：
 //   - lower: 存放原始的 busybox 文件（只读镜像层）
-//   - upper: 容器内产生的新文件和变动存放在这里（可写层）
+//   - upper: 容器内产生的新文件和变动存放在s这里（可写层）
 //   - work:  OverlayFS 内部使用的工作目录（不用管内容，必须有）
 //   - merged: 将 lower 和 upper 合并起来挂载到这里的目录（容器最终看到的世界）
 func NewWorkSpace(rootPath string, containerID string) error {
 	// ── 第 1 步：准备这 4 个目录的绝对路径 ──
 	workDir := containerWorkDir(rootPath, containerID)
-	lower := filepath.Join(workDir, lowerDir)
+	lower := filepath.Join(rootPath, lowerDir)
 	upper := filepath.Join(workDir, "upper")
 	work := filepath.Join(workDir, "work")
 	merged := filepath.Join(workDir, "merged")
