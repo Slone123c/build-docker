@@ -177,7 +177,14 @@ func setUpMount() {
 	//
 	// ⚠️ 注意：pivot_root 只能在已挂载了新根目录（newRoot）的前提下使用。
 	//    所以这一步必须在 setUpMount() 之后执行。
-	if err := setUpPivotRoot(fs.RootPath + "/merged"); err != nil {
+
+	mergedPath := os.Getenv("CONTAINER_MERGED")
+	if mergedPath == "" {
+		logrus.Errorf("CONTAINER_MERGED env not set")
+		return
+	}
+
+	if err := setUpPivotRoot(mergedPath); err != nil {
 		logrus.Errorf("set up pivot root error: %v", err)
 	}
 

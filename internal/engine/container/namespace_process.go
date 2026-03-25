@@ -28,9 +28,11 @@
 package container
 
 import (
+	"build-docker/internal/engine/fs"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -72,8 +74,11 @@ func NewParentProcess(tty bool, volume string, containerName string) (*exec.Cmd,
 			syscall.CLONE_NEWNET | //  NET 命名空间：隔离网络栈（网卡、IP、端口等）
 			syscall.CLONE_NEWIPC, //   IPC 命名空间：隔离进程间通信资源
 	}
-
-	cmd.Env = append(os.Environ(), "volume="+volume)
+	mergedPath := filepath.Join(fs.RootPath, containerName, "merged")
+	cmd.Env = append(os.Environ(),
+		"volume="+volume,
+		"CONTAINER_MERGED="+mergedPath,
+	)
 
 	// 如果开启了交互模式（-it），将子进程的标准 IO 连接到当前终端
 	// 这样用户就可以直接在终端与容器内的进程交互（比如使用 /bin/sh）
