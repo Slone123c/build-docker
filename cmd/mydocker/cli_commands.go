@@ -53,6 +53,10 @@ var runCommand = cli.Command{
 
 	// Flags 定义了该命令支持的参数/选项
 	Flags: []cli.Flag{
+		cli.StringSliceFlag{
+			Name:  "e",
+			Usage: "set environment variables, e.g.: -e KEY=value",
+		},
 		cli.BoolFlag{
 			Name:  "d",
 			Usage: "detach mode",
@@ -111,10 +115,10 @@ var runCommand = cli.Command{
 			CpuQuota:    context.String("cpu"),
 			// CpuSet:      context.String("cpuset"),
 		}
-
+		envSlice := context.StringSlice("e")
 		// 调用 RunContainer() 函数（定义在 container_runner.go 中）
 		// 它会创建一个带有 Linux 命名空间隔离的子进程来运行用户命令
-		engine.RunContainer(tty, detach, cmdArray, resConf, volume, containerName)
+		engine.RunContainer(tty, detach, cmdArray, resConf, volume, containerName, envSlice)
 		return nil
 	},
 }
@@ -234,7 +238,7 @@ var rmCommand = cli.Command{
 	Usage: "Remove a stopped container: mydocker rm [-f] <container>",
 	Flags: []cli.Flag{
 		cli.BoolFlag{
-			Name: "f",
+			Name:  "f",
 			Usage: "force remove a running container",
 		},
 	},
