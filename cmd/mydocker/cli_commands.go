@@ -96,7 +96,7 @@ var runCommand = cli.Command{
 		// context.NArg() 返回非 flag 参数的数量
 		// 例如 "./my-docker run -it /bin/sh" 中，NArg() = 1（/bin/sh）
 		if context.NArg() < 1 {
-			return fmt.Errorf("please provide a command to run")
+			return fmt.Errorf("missing command. usage: mydocker run [options] <command> (e.g., mydocker run -it sh)")
 		}
 
 		var cmdArray []string
@@ -159,7 +159,7 @@ var commitCommand = cli.Command{
 	Usage: "Commit a container into an image",
 	Action: func(context *cli.Context) error {
 		if context.NArg() < 1 {
-			return fmt.Errorf("missing image name")
+			return fmt.Errorf("missing image name. usage: mydocker commit <image_name>")
 		}
 		imageName := context.Args().Get(0)
 		mergedPath := "/root/rootfs/merged"
@@ -193,7 +193,7 @@ var logCommand = cli.Command{
 	Usage: "View logs of a container",
 	Action: func(context *cli.Context) error {
 		if context.NArg() < 1 {
-			return fmt.Errorf("missing container id")
+			return fmt.Errorf("missing container id/name. usage: mydocker logs <container>")
 		}
 		containerID := context.Args().Get(0)
 		container.LogContainer(containerID)
@@ -210,7 +210,7 @@ var execCommand = cli.Command{
 		}
 
 		if context.NArg() < 2 {
-			return fmt.Errorf("usage: mydocker exec <container> <command>")
+			return fmt.Errorf("missing arguments. usage: mydocker exec <container> <command> (e.g., mydocker exec container1 ls)")
 		}
 
 		containerName := context.Args().Get(0)
@@ -225,7 +225,7 @@ var stopCommand = cli.Command{
 	Usage: "Stop a running container: mydocker stop <container>",
 	Action: func(context *cli.Context) error {
 		if context.NArg() < 1 {
-			return fmt.Errorf("missing container id")
+			return fmt.Errorf("missing container id/name. usage: mydocker stop <container>")
 		}
 		containerName := context.Args().Get(0)
 		engine.StopContainer(containerName)
@@ -244,7 +244,7 @@ var rmCommand = cli.Command{
 	},
 	Action: func(context *cli.Context) error {
 		if context.NArg() < 1 {
-			return fmt.Errorf("missing container id")
+			return fmt.Errorf("missing container id/name. usage: mydocker rm <container>")
 		}
 		containerName := context.Args().Get(0)
 		force := context.Bool("f")
