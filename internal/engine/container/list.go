@@ -19,7 +19,7 @@ func ListContainers() {
 	for _, file := range files {
 		containerInfo, err := getContainerInfo(file)
 		if err != nil {
-			log.Errorf("get container info error: %v", err)
+			log.Warnf("get container info error: %v", err)
 			continue // 跳过错误的容器，不要添加 nil
 		}
 		containers = append(containers, containerInfo)
@@ -53,7 +53,7 @@ func getContainerInfo(file os.DirEntry) (*Info, error) {
 	filePath := DefaultInfoBaseDir + file.Name() + "/" + CONFIG_NAME
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Errorf("read file error: %v", err)
+		log.Warnf("read file error: %v", err)
 		return nil, err
 	}
 	info := new(Info)
