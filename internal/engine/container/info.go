@@ -52,6 +52,7 @@ type InitInfo struct {
 	CommandArray  []string
 	ContainerName string
 	ContainerId   string
+	IP            string
 }
 
 func CreateContainerInfo(r InitInfo) error {

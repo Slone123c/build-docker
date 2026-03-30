@@ -21,6 +21,7 @@ import (
 	"build-docker/internal/engine/cgroups"
 	"build-docker/internal/engine/container" // 容器子包，负责创建进程和初始化容器
 	"build-docker/internal/engine/fs"
+	"build-docker/internal/engine/network"
 	"os"
 	"strings"
 
@@ -45,6 +46,27 @@ func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConf
 	// 先生成容器 ID，确保后续使用一致的标识
 	containerId := container.RandContainerName(10)
 
+	if err := network.SetupBridge(); err != nil {
+		logrus.Errorf("setup bridge: %v", err)
+		return
+	}
+
+	if err := network.SetupIPTables(); err != nil {
+		logrus.Warnf("setup iptables: %v", err)
+	}
+
+	// 分配 IP
+	containerIP, err := network.AllocateIP(containerId)
+	if err != nil {
+		logrus.Errorf("allocate ip: %v", err)
+		return
+	}
+	defer func() {
+		if err := network.ReleaseIP(containerId); err != nil {
+			logrus.Warnf("release ip: %v", err)
+		}
+	}()
+
 	// 创建"父进程"（实际是一个 exec.Cmd 对象）
 	// 这个进程一旦启动，就已经在新的 Linux 命名空间中了
 	parent, writePipe, err := container.NewParentProcess(tty, volume, containerId, envSlice)
@@ -64,18 +86,25 @@ func RunContainer(tty, detach bool, cmdArray []string, res *cgroups.ResourceConf
 	if err := parent.Start(); err != nil {
 		log.Fatal(err) // 启动失败则打印错误并退出
 	}
+
+	if err := network.SetupVeth(parent.Process.Pid, containerIP, containerId); err != nil {
+		logrus.Errorf("setup veth: %v", err)
+	}
+
 	// 记录信息
 	err = container.CreateContainerInfo(container.InitInfo{
 		ContainerPID:  parent.Process.Pid,
 		ContainerName: containerName,
 		CommandArray:  cmdArray,
 		ContainerId:   containerId,
+		IP:            containerIP.String(),
 	})
 	if err != nil {
 		log.Errorf("record container info error: %v", err)
 		return
 	}
 	defer container.DeleteContainerInfo(containerId)
+	defer network.TeardownVeth(containerId)
 
 	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
 	defer cgroupManager.Destroy()
